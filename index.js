@@ -27,6 +27,10 @@ app.post('/login', function (req, res) {
     var emailid=req.body.emailid;
     var password=req.body.password;
 
+        //checking if any value is null or not
+        if (emailid === "" || password === "" ||!emailid || !password ) {
+            res917.status(412).send("please enter all the required input ");
+        }
     con.query("SELECT * FROM user WHERE emailid=? and password=?",[emailid,password], (err, rows, fields) => {
         if (!err) {
             if (rows.length > 0) {
@@ -42,6 +46,51 @@ app.post('/login', function (req, res) {
     });
 });
 
+
+app.post('/register', function(req,res){
+    var emailid=req.body.emailid;
+    var password=req.body.password;
+    var address=req.body.address;
+    var username=req.body.username;
+
+    console.log(username)
+    //checking if any value is null or not
+    if (emailid === "" || password === ""||address===""||username===""||!username ||!address ||!emailid || !password ) {
+                res917.status(412).send("please enter all the required input ");
+    }
+    //Checking if email-id exist in the database or not
+    con.query("SELECT * FROM user WHERE emailid=? ",[emailid], (err, rows, fields) => {
+        if (!err) {
+            if (rows.length > 0) {
+            res.status(512).send("Email-Id exist in the Database");
+            }
+            else{
+
+                //If emai-id does not exist thne store the user information
+                con.query("insert into user(username,password,emailid,address) values(?,?,?,?)",[username,password,emailid,address], (err, rows, fields) => {
+                    if (!err) {
+                        res.status(200).send("Your Registration is successfull!!");
+                    }
+                    else {
+                        console.log(err)
+                        res.status(500).send("Server error please try again later");
+                    }
+                });            
+            }
+        }
+        else {
+            res.status(500).send("Server error please try again later");
+        }
+    });
+
+
+
+
+
+
+
+    
+});
 
 
 //App listening on PORT 3000
