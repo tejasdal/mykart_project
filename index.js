@@ -9,7 +9,8 @@ const Joi = require('joi');
 
 const serverless = require('serverless-http');
 
-const MY_SELLER_URL = "http://192.168.0.12:1337";
+// const MY_SELLER_URL = "http://192.168.0.12:1337";
+const MY_SELLER_URL = "http://localhost:8080";
 const MY_DELIVERY_URL = "";
 
 //database connection
@@ -179,6 +180,7 @@ app.post('/order', function (req, res) {
 async function checkQtyFromSeller(req) {
     let promise = await confirmQtyFromSeller(req);
     if (promise == true) {
+        console.log("MySeller has enough stock to place order.");
         storeOrderData(req);
     }
 }
@@ -188,13 +190,18 @@ async function confirmQtyFromSeller(req) {
 
     console.log('Calling the API seller company to check the Quantity of the selected product');
     try {
-        let response = await axios.get(MY_SELLER_URL + '/confirmQuantity',
-            {
-                "seller_id": req.body.sellerId,
-                "product_id": req.body.productId
-            });
+        let response = await axios.get(MY_SELLER_URL + '/products/get-product'+ '?productId='+req.body.productId,
+            // {
+            //     "seller_id": req.body.sellerId,
+            //     "product_id": req.body.productId
+            // }
+            );
         if (response.status === 200) {
-            return true;
+            if(response.data.qoh - req.body.orderQty >= 0){
+                return true;
+            }else{
+                return false;
+            }
         }
     } catch (err) {
         console.log('Error while storing the  order data into the Delivery company: ' + err);
@@ -269,7 +276,7 @@ async function storeOrderDataInDeliverCompany(req, order_id) {
 async function storeOrderDataInSellerCompany(req, order_id) {
     console.log('Caaling the API of Delivery company and storing the ordered details');
     try {
-        let response = await axios.get(MY_SELLER_URL + '/orderData',
+        let response = await axios.get(MY_SELLER_URL + '/products/order',
             {
                 "user_id": req.body.userId,
                 "seller_id": req.body.sellerId,
