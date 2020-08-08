@@ -27,6 +27,8 @@ con.connect(function (err) {
 
 //User validation (Will be used when the user wants to place the order)
 app.post('/login', function (req, res) {
+
+    console.log("called");
     var emailid = req.body.emailid;
     var password = req.body.password;
 
@@ -37,9 +39,11 @@ app.post('/login', function (req, res) {
     con.query("SELECT * FROM user WHERE emailid=? and password=?", [emailid, password], (err, rows, fields) => {
         if (!err) {
             if (rows.length > 0) {
-                res.status(200).send("Your login is successfull!!");
+              //  console.log(true);
+                res.status(200).send(rows);
             }
             else {
+                console.log("wrong")
                 res.status(412).send("Wrong Credentials");
             }
         }
@@ -66,7 +70,7 @@ app.post('/register', function (req, res) {
     con.query("SELECT * FROM user WHERE emailid=? ", [emailid], (err, rows, fields) => {
         if (!err) {
             if (rows.length > 0) {
-                res.status(512).send("Email-Id exist in the Database");
+                res.status(412).send("Email-Id exist in the Database");
             }
             else {
 
