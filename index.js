@@ -11,7 +11,7 @@ const serverless = require('serverless-http');
 
 // const MY_SELLER_URL = "http://192.168.0.12:1337";
 const MY_SELLER_URL = "http://localhost:8080";
-const MY_DELIVERY_URL = "";
+const MY_DELIVERY_URL = "http://localhost:8848";
 
 //database connection
 var con = mysql.createConnection({
@@ -215,7 +215,7 @@ async function confirmQtyFromSeller(req,res) {
 async function storeOrderData(req,res) {
 
 
-    console.log("Storing the user order data in to MyKArt company's Database")
+    console.log("Storing the user order data in to MyKart company's Database")
     let sql = `INSERT INTO Orders(user_id, seller_id, order_qty, product_id, user_address, order_total) VALUES (?, ?, ?, ?, ?, ?)`;
 
     con.query(sql, [req.body.userId, req.body.sellerId, req.body.orderQty, req.body.productId, req.body.userAdd, req.body.orderTotal], (err, result) => {
@@ -226,7 +226,7 @@ async function storeOrderData(req,res) {
         }
         else {
             //Getting the last Order_id
-            con.query("select order_id from orders where order_id=(SELECT LAST_INSERT_ID())", async (err, rows, fields) => {
+            con.query("select order_id from Orders where order_id=(SELECT LAST_INSERT_ID())", async (err, rows, fields) => {
                 if (!err) {
                     //Getting the order_id
                     let order_id = rows[0].order_id;
@@ -240,6 +240,7 @@ async function storeOrderData(req,res) {
                     }
                 }
                 else {
+                    console.log("Error while fetching order id: ", err);
                     res.status(500).send("Server error please try again later");
                 }
             });
@@ -248,9 +249,9 @@ async function storeOrderData(req,res) {
 }
 //Call the delivercompany API and send the order information(Storing the order data).
 async function storeOrderDataInDeliverCompany(req, order_id) {
-    console.log('Caaling the API of Delivery company and storing the ordered details');
+    console.log('Calling the API of Delivery company and storing the ordered details');
     try {
-        let response = await axios.get(MY_DELIVERY_URL + '/orderData',
+        let response = await axios.post(MY_DELIVERY_URL + '/delivery/order',
             {
                 "user_id": req.body.userId,
                 "seller_id": req.body.sellerId,
