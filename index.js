@@ -252,7 +252,7 @@ async function storeOrderDataInDeliverCompany(req, order_id) {
 async function storeOrderDataInSellerCompany(req, order_id) {
     console.log('Caaling the API of Delivery company and storing the ordered details');
     try {
-        let response = await axios.get(MY_SELLER_URL + '/orderData',
+        let response = await axios.get(MY_SELLER_URL + '/products/order',
             {
                 "user_id": req.body.userId,
                 "seller_id": req.body.sellerId,
