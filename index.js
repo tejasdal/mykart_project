@@ -55,6 +55,31 @@ app.post('/login', function (req, res) {
 
 
 
+app.post('/OrderHistory', function (req, res) {
+
+    console.log("called");
+    var user_id = req.body.user_id;
+ 
+    //checking if any value is null or not
+    if (user_id === "" ||  !user_id ) {
+        res.status(412).send("please enter all the required input ");
+    }
+    con.query("SELECT * FROM Orders WHERE user_id=? ", [user_id], (err, rows, fields) => {
+        if (!err) {
+           
+                res.status(200).send(rows);
+       
+        }
+        else {
+            console.log(err);
+            res.status(500).send("Server error please try again later");
+        }
+    });
+});
+
+
+
+
 app.post('/register', function (req, res) {
     var emailid = req.body.emailid;
     var password = req.body.password;
@@ -94,7 +119,6 @@ app.post('/register', function (req, res) {
 
 //Fetch products from MySeller
 app.get('/products', function (req, res) {
-
     return getProductsFromMySeller(res);
 });
 
