@@ -169,7 +169,7 @@ app.post('/order', function (req, res) {
     }
 
     //Calling async function to check the qty from the seller.
-    checkQtyFromSeller(req);
+    checkQtyFromSeller(req,res);
 
 
 
@@ -177,16 +177,16 @@ app.post('/order', function (req, res) {
 
 
 //Async function to call the seller api and confirm that the ordered product's qty is available or not
-async function checkQtyFromSeller(req) {
-    let promise = await confirmQtyFromSeller(req);
+async function checkQtyFromSeller(req,res) {
+    let promise = await confirmQtyFromSeller(req,res);
     if (promise == true) {
         console.log("MySeller has enough stock to place order.");
-        storeOrderData(req);
+        storeOrderData(req,res);
     }
 }
 
 //Async function that calls the seller API to check the qty
-async function confirmQtyFromSeller(req) {
+async function confirmQtyFromSeller(req,res) {
 
     console.log('Calling the API seller company to check the Quantity of the selected product');
     try {
@@ -212,7 +212,7 @@ async function confirmQtyFromSeller(req) {
 
 
 //If the qty is available then store the irder data into the MyKart's database.
-async function storeOrderData(req) {
+async function storeOrderData(req,res) {
 
 
     console.log("Storing the user order data in to MyKArt company's Database")
