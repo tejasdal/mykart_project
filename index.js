@@ -9,7 +9,8 @@ const Joi = require('joi');
 var passwordHash = require('password-hash');
 
 const serverless = require('serverless-http');
- const MY_SELLER_URL = "http://192.168.0.12:1337";
+
+ const MY_SELLER_URL = "http://ec2-54-226-69-59.compute-1.amazonaws.com:1337";
 //const MY_SELLER_URL = "http://localhost:8080";
 const MY_DELIVERY_URL = "http://ec2-18-212-133-17.compute-1.amazonaws.com:1337";
 
@@ -44,16 +45,15 @@ app.post('/login', function (req, res) {
             if (rows.length > 0) {
 
                 console.log();
-                if(passwordHash.verify(password,rows[0].password ))
-                {
-                      //  console.log(true);
-                res.status(200).send(rows);
-                } 
+                if (passwordHash.verify(password, rows[0].password)) {
+                    //  console.log(true);
+                    res.status(200).send(rows);
+                }
                 else {
                     console.log("wrong")
                     res.status(412).send("Wrong Credentials");
                 }
-             
+
             }
             else {
                 console.log("wrong")
@@ -72,16 +72,16 @@ app.post('/OrderHistory', function (req, res) {
 
     console.log("called");
     var user_id = req.body.user_id;
- 
+
     //checking if any value is null or not
-    if (user_id === "" ||  !user_id ) {
+    if (user_id === "" || !user_id) {
         res.status(412).send("please enter all the required input ");
     }
     con.query("SELECT * FROM Orders WHERE user_id=? ", [user_id], (err, rows, fields) => {
         if (!err) {
-           
-                res.status(200).send(rows);
-       
+
+            res.status(200).send(rows);
+
         }
         else {
             console.log(err);
@@ -182,50 +182,193 @@ app.post('/order', function (req, res) {
     }
 
     //Calling async function to check the qty from the seller.
-    checkQtyFromSeller(req,res);
+    checkQtyFromSeller(req, res);
 
 
 
 });
 
+app.post('/order/commit', async function (req, res) {
+
+    console.log(req.query);
+
+    // const schema = Joi.object({
+    //     perform: Joi.required(),
+    //     tranId: Joi.required(),
+    // });
+
+    // const result = schema.validate(req.body);
+    // if (result.error) {
+    //     res.status(400).send(result.error.details[0].message);
+    //     return;
+    // }
+
+    if (req.query.perform === 'true') {
+        //perform commit with given id;
+        let commit = await performXACommit(req.query.tranId, (err, result) => {
+            if (err) {
+                console.log(err);
+                res.status(500).send("Error while executing XA COMMIT transaction.");
+                return;
+            } else {
+                return;
+            }
+        });
+    } else {
+        //rollback with given id;
+        let rollback = await performXARollback(req.query.tranId, (err, result) => {
+            if (err) {
+                console.log(err);
+                res.status(500).send("Error while executing XA ROCKBACK transaction.");
+                return;
+            } else {
+                return;
+            }
+        });
+    }
+    console.log("Transaction: " + req.query.tranId + " completed successfully!");
+    res.status(200).send("Transaction: " + req.query.tranId + " completed successfully!");
+});
+
 
 //Async function to call the seller api and confirm that the ordered product's qty is available or not
-async function checkQtyFromSeller(req,res) {
-    let promise = await confirmQtyFromSeller(req,res);
-    if (promise == true) {
-        console.log("MySeller has enough stock to place order.");
-        storeOrderData(req,res);
-    }
+async function checkQtyFromSeller(req, res) {
+
+    let getMaxSQL = "insert into MaxTranId() value()";
+    con.query(getMaxSQL, (err, result) => {
+        if (err) {
+            console.log(err);
+            res.status(500).send("DB Error while adding orders.");
+            return;
+        } else {
+            con.query("SELECT LAST_INSERT_ID()", async (err, rows) => {
+                let tempID = rows[0]['LAST_INSERT_ID()'];
+                console.log(tempID);
+
+                let xaStart = await performXAStart(tempID, async (err, result) => {
+
+                    if (err) {
+                        console.log(err);
+                        res.status(500).send("Error while executing XA START transaction.");
+                    } else {
+                        console.log("XA START executed.");
+                        // let promise = await confirmQtyFromSeller(req, res);
+                        let promise = true;
+                        if (promise == true) {
+                            console.log("MySeller has enough stock to place order.");
+                            await storeOrderData(req, res, tempID);
+
+
+                        } else {
+                            let xaEnd = await performXAEnd(tempID, async (err, result) => {
+                                if (err) {
+                                    console.log(err);
+                                    res.status(500).send("Error while executing XA END transaction.");
+                                } else {
+                                    let xaPrepare = await performXAPrepare(tempID, async (err, result) => {
+                                        if (err) {
+                                            console.log(err);
+                                            res.status(500).send("Error while executing XA PREPARE transaction.");
+                                        } else {
+                                            let xaRollback = await performXARollback(tempID, async (err, result) => {
+
+                                                if (err) {
+                                                    console.log(err);
+                                                    res.status(500).send("Error while executing XA ROLLBACK transaction.");
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+        }
+    });
+
 }
 
 //Async function that calls the seller API to check the qty
-async function confirmQtyFromSeller(req,res) {
+async function confirmQtyFromSeller(req, res) {
 
     console.log('Calling the API seller company to check the Quantity of the selected product');
     try {
-        let response = await axios.get(MY_SELLER_URL + '/products/get-product'+ '?productId='+req.body.productId,
+        let response = await axios.get(MY_SELLER_URL + '/products/get-product' + '?productId=' + req.body.productId,
             // {
             //     "seller_id": req.body.sellerId,
             //     "product_id": req.body.productId
             // }
-            );
+        );
         if (response.status === 200) {
-            if(response.data.qoh - req.body.orderQty >= 0){
+            if (response.data.qoh - req.body.orderQty >= 0) {
                 return true;
-            }else{
+            } else {
                 return false;
             }
         }
     } catch (err) {
-        console.log('Error while storing the  order data into the Delivery company: ' + err);
-        sendError(res, 'Error while storing the  order data into the Delivery company: ' + err.response.data);
+        console.log('Error while storing the  order data into the Seller company: ' + err);
+        sendError(res, 'Error while storing the  order data into the Seller company: ' + err.response.data);
         return false;
     }
 }
 
+async function performXAStart(id, callback) {
+    console.log("Executing XA START " + id + ".");
+    //  con.query("XA START '"+ id +"';", (err, result) =>{
+    //     if(err){
+    //         console.log("Error while executing XA START "+ id + ", error: "+ err);
+    //         return false;
+    //     }
+    //     console.log("Executed XA START "+ id + ".");
+    //     return true;
+    // });
+    con.query("XA START '" + id + "';", callback);
+}
+
+async function performXAEnd(id, callback) {
+    console.log("Executing XA END " + id + ".");
+    con.query("XA END '" + id + "';", callback);
+}
+
+async function performXAPrepare(id, callback) {
+    console.log("Executing XA PREPARE " + id + ".");
+    con.query("XA PREPARE '" + id + "';", callback);
+}
+
+async function performXACommit(id, callback) {
+    console.log("Executing XA COMMIT " + id + ".");
+    con.query("XA COMMIT '" + id + "';", callback);
+}
+
+async function performXARollback(id, callback) {
+    console.log("Executing XA ROLLBACK " + id + ".");
+    con.query("XA ROLLBACK '" + id + "';", callback);
+}
+
+async function makePrepareForCommit(tranId) {
+
+    let xaEnd = await performXAEnd(tranId, async (err, result) => {
+        if (err) {
+            console.log(err);
+            res.status(500).send("Error while executing XA END transaction.");
+        } else {
+            let xaPrepare = await performXAPrepare(tranId, (err, result) => {
+                if (err) {
+                    console.log(err);
+                    res.status(500).send("Error while executing XA PREPARE transaction.");
+                } else {
+                    return;
+                }
+            });
+        }
+    });
+}
 
 //If the qty is available then store the irder data into the MyKart's database.
-async function storeOrderData(req,res) {
+async function storeOrderData(req, res, tranId) {
 
 
     console.log("Storing the user order data in to MyKart company's Database")
@@ -245,12 +388,14 @@ async function storeOrderData(req,res) {
                     let order_id = rows[0].order_id;
                     console.log("user's OrderId is-->" + order_id)
                     //waiting for the delivery company's response (Calling them to store the order data)
-                    let promise = await storeOrderDataInDeliverCompany(req, order_id);
+                    let promise = await storeOrderDataInDeliverCompany(req, order_id, res, tranId);
                     if (promise == true) {
                         //Calling seller company to store the order data
-                        storeOrderDataInSellerCompany(req, order_id);
+                        storeOrderDataInSellerCompany(req, order_id, res, tranId);
                         res.status(200).send(req.body);
                     }
+
+                    await makePrepareForCommit(tranId);
                 }
                 else {
                     console.log("Error while fetching order id: ", err);
@@ -261,7 +406,7 @@ async function storeOrderData(req,res) {
     });
 }
 //Call the delivercompany API and send the order information(Storing the order data).
-async function storeOrderDataInDeliverCompany(req, order_id) {
+async function storeOrderDataInDeliverCompany(req, order_id, res, tranId) {
     console.log('Calling the API of Delivery company and storing the ordered details');
     try {
         let response = await axios.post(MY_DELIVERY_URL + '/delivery/order',
@@ -287,10 +432,10 @@ async function storeOrderDataInDeliverCompany(req, order_id) {
 
 
 //Call the Seller comapny API and send the order information(Storing the order data).
-async function storeOrderDataInSellerCompany(req, order_id) {
-    console.log('Caaling the API of Delivery company and storing the ordered details');
+async function storeOrderDataInSellerCompany(req, order_id, res, tranId) {
+    console.log('Calling the API of Seller company and storing the ordered details');
     try {
-        let response = await axios.get(MY_SELLER_URL + '/products/order',
+        let response = await axios.post(MY_SELLER_URL + '/products/order?tranId='+tranId,
             {
                 "user_id": req.body.userId,
                 "seller_id": req.body.sellerId,
@@ -304,8 +449,8 @@ async function storeOrderDataInSellerCompany(req, order_id) {
             return true;
         }
     } catch (err) {
-        console.log('Error while storing the  order data into the Delivery company: ' + err);
-        sendError(res, 'Error while storing the  order data into the Delivery company: ' + err.response.data);
+        console.log('Error while storing the  order data into the Seller company: ' + err);
+        sendError(res, 'Error while storing the  order data into the Seller company: ' + err.response.data);
         return false;
     }
 }
