@@ -474,4 +474,7 @@ async function B(params) {
 }
 
 //App listening on PORT 3000
-app.listen(3000);
+// app.listen(3000);
+
+
+module.exports.handler = serverless(app);
