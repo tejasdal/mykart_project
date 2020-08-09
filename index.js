@@ -20,7 +20,8 @@ var con = mysql.createConnection({
     host: "assignment4.ckyqzu90h1yu.us-east-1.rds.amazonaws.com",
     user: "root",
     password: "shreeji2017",
-    database: "Final_project"
+    database: "Final_project",
+    port: 3306
 });
 //Ensuring the connection with database
 con.connect(function (err) {
@@ -464,7 +465,7 @@ async function storeOrderDataInSellerCompany(req, order_id, res, tranId) {
 }
 
 //App listening on PORT 3000
-// app.listen(3000);
+app.listen(3000);
 
 
-module.exports.handler = serverless(app);
+// module.exports.handler = serverless(app);
