@@ -9,9 +9,8 @@ const Joi = require('joi');
 var passwordHash = require('password-hash');
 
 const serverless = require('serverless-http');
-
-// const MY_SELLER_URL = "http://192.168.0.12:1337";
-const MY_SELLER_URL = "http://localhost:8080";
+ const MY_SELLER_URL = "http://192.168.0.12:1337";
+//const MY_SELLER_URL = "http://localhost:8080";
 const MY_DELIVERY_URL = "http://ec2-18-212-133-17.compute-1.amazonaws.com:1337";
 
 //database connection
