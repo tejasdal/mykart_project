@@ -6,6 +6,7 @@ var app = express();
 app.use(bodyParser.json());
 const axios = require('axios');
 const Joi = require('joi');
+var passwordHash = require('password-hash');
 
 const serverless = require('serverless-http');
 
@@ -37,11 +38,23 @@ app.post('/login', function (req, res) {
     if (emailid === "" || password === "" || !emailid || !password) {
         res.status(412).send("please enter all the required input ");
     }
-    con.query("SELECT * FROM user WHERE emailid=? and password=?", [emailid, password], (err, rows, fields) => {
+    var hashedPassword = passwordHash.generate(password);
+
+    con.query("SELECT * FROM user WHERE emailid=? ", [emailid], (err, rows, fields) => {
         if (!err) {
             if (rows.length > 0) {
-              //  console.log(true);
+
+                console.log();
+                if(passwordHash.verify(password,rows[0].password ))
+                {
+                      //  console.log(true);
                 res.status(200).send(rows);
+                } 
+                else {
+                    console.log("wrong")
+                    res.status(412).send("Wrong Credentials");
+                }
+             
             }
             else {
                 console.log("wrong")
@@ -99,9 +112,10 @@ app.post('/register', function (req, res) {
                 res.status(412).send("Email-Id exist in the Database");
             }
             else {
-
+                var hashedPassword = passwordHash.generate(password);
+                console.log(hashedPassword);
                 //If emai-id does not exist thne store the user information
-                con.query("insert into user(username,password,emailid,address) values(?,?,?,?)", [username, password, emailid, address], (err, rows, fields) => {
+                con.query("insert into user(username,password,emailid,address) values(?,?,?,?)", [username, hashedPassword, emailid, address], (err, rows, fields) => {
                     if (!err) {
                         res.status(200).send("Your Registration is successfull!!");
                     }
