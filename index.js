@@ -105,7 +105,7 @@ app.post('/register', function (req, res) {
     console.log(username)
     //checking if any value is null or not
     if (emailid === "" || password === "" || address === "" || username === "" || !username || !address || !emailid || !password) {
-        res917.status(412).send("please enter all the required input ");
+        res.status(412).send("please enter all the required input ");
     }
     //Checking if email-id exist in the database or not
     con.query("SELECT * FROM user WHERE emailid=? ", [emailid], (err, rows, fields) => {
@@ -245,6 +245,13 @@ async function checkQtyFromSeller(req, res) {
             return;
         } else {
             con.query("SELECT LAST_INSERT_ID()", async (err, rows) => {
+
+                if (err) {
+                    console.log(err);
+                    res.status(500).send("DB Error while adding orders.");
+                    return;
+                }
+                
                 let tempID = rows[0]['LAST_INSERT_ID()'];
                 console.log(tempID);
 
@@ -351,7 +358,7 @@ async function performXARollback(id, callback) {
     con.query("XA ROLLBACK '" + id + "';", callback);
 }
 
-async function makePrepareForCommit(tranId) {
+async function makePrepareForCommit(tranId, res) {
 
     let xaEnd = await performXAEnd(tranId, async (err, result) => {
         if (err) {
@@ -398,7 +405,7 @@ async function storeOrderData(req, res, tranId) {
                         res.status(200).send(req.body);
                     }
 
-                    await makePrepareForCommit(tranId);
+                    await makePrepareForCommit(tranId, res);
                 }
                 else {
                     console.log("Error while fetching order id: ", err);
