@@ -465,7 +465,7 @@ async function storeOrderDataInSellerCompany(req, order_id, res, tranId) {
 }
 
 //App listening on PORT 3000
-app.listen(3000);
+// app.listen(3000);
 
 
-// module.exports.handler = serverless(app);
+module.exports.handler = serverless(app);
