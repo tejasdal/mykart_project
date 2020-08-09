@@ -11,8 +11,9 @@ var passwordHash = require('password-hash');
 const serverless = require('serverless-http');
 
  const MY_SELLER_URL = "http://ec2-54-226-69-59.compute-1.amazonaws.com:1337";
-//const MY_SELLER_URL = "http://localhost:8080";
+// const MY_SELLER_URL = "http://192.168.0.12:1337";
 const MY_DELIVERY_URL = "http://ec2-18-212-133-17.compute-1.amazonaws.com:1337";
+// const MY_DELIVERY_URL = "http://localhost:1337";
 
 //database connection
 var con = mysql.createConnection({
@@ -416,7 +417,7 @@ async function storeOrderData(req, res, tranId) {
 async function storeOrderDataInDeliverCompany(req, order_id, res, tranId) {
     console.log('Calling the API of Delivery company and storing the ordered details');
     try {
-        let response = await axios.post(MY_DELIVERY_URL + '/delivery/order',
+        let response = await axios.post(MY_DELIVERY_URL + '/delivery/order?tranId='+tranId,
             {
                 "user_id": req.body.userId,
                 "seller_id": req.body.sellerId,
@@ -460,24 +461,6 @@ async function storeOrderDataInSellerCompany(req, order_id, res, tranId) {
         sendError(res, 'Error while storing the  order data into the Seller company: ' + err.response.data);
         return false;
     }
-}
-
-
-
-app.get('/temp', function (req, res) {
-    let data = A(req);
-
-})
-
-async function A(params) {
-    let data = await B(params);
-    console.log(data)
-
-}
-
-
-async function B(params) {
-    return false;
 }
 
 //App listening on PORT 3000
