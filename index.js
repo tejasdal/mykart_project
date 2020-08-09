@@ -10,12 +10,9 @@ var passwordHash = require('password-hash');
 
 const serverless = require('serverless-http');
 
-const MY_SELLER_URL = "http://192.168.0.12:1337";
-// const MY_SELLER_URL = "http://localhost:8080";
-// const MY_DELIVERY_URL = "http://ec2-18-212-133-17.compute-1.amazonaws.com:1337";
-const MY_DELIVERY_URL = "http://localhost:8848";
-
-// let tempID = '297';
+ const MY_SELLER_URL = "http://ec2-54-226-69-59.compute-1.amazonaws.com:1337";
+//const MY_SELLER_URL = "http://localhost:8080";
+const MY_DELIVERY_URL = "http://ec2-18-212-133-17.compute-1.amazonaws.com:1337";
 
 //database connection
 var con = mysql.createConnection({
@@ -484,4 +481,7 @@ async function B(params) {
 }
 
 //App listening on PORT 3000
-app.listen(3000);
+// app.listen(3000);
+
+
+module.exports.handler = serverless(app);
